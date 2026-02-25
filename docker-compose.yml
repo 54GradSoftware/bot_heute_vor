@@ -1,3 +1,7 @@
+networks:
+  default:
+    external: false
+
 services:
   bot-heute-vor:
     build: .
