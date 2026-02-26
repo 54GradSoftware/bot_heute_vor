@@ -19,7 +19,8 @@ MASTODON_INSTANCE_URL="https://your.instance" MASTODON_ACCESS_TOKEN="your_secret
 1. Ruft "An diesem Tag"-Ereignisse von der Wikimedia-REST-API ab (`https://api.wikimedia.org/feed/v1/wikipedia/de/onthisday/selected/${mm}/${dd}`)
 2. Sortiert die Ereignisse chronologisch
 3. Formatiert jedes Ereignis als "Vor X Jahren: ..." mit einem Wikipedia-Link
-4. Postet die Toots als Thread auf Mastodon [mithilfe der Mastodon Rest API](https://docs.joinmastodon.org/methods/statuses/#create)
+4. Erkennt automatisch Städte (DE, AT, CH) und Bundesländer im Text und fügt passende Hashtags hinzu
+5. Postet die Toots als Thread auf Mastodon [mithilfe der Mastodon Rest API](https://docs.joinmastodon.org/methods/statuses/#create)
 
 ## Lizenz
 Die komplette Software steht unter [AGPL-3.0 license](/LICENSE).

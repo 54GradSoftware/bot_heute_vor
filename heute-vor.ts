@@ -1,3 +1,5 @@
+import { LOCATIONS } from "./locations.js";
+
 const API_BASE = "https://api.wikimedia.org/feed/v1/wikipedia/de/onthisday/selected";
 const USER_AGENT = "bot-heute-vor/1.0 (https://github.com; bot@example.com)";
 const TOOT_DELAY_MS = 1_000*60*75; // 75 Minuten
@@ -18,6 +20,14 @@ interface SelectedEvent {
 
 interface ApiResponse {
   selected: SelectedEvent[];
+}
+
+function findLocationHashtags(text: string): string[] {
+  return LOCATIONS
+    .filter((location) => text.includes(location))
+    .map((location) =>
+      `#${location.replace(/[\s-]/g, "").replace(/[äöüÄÖÜ]/g, (c) => ({ ä: "a", ö: "o", ü: "u", Ä: "A", Ö: "O", Ü: "U" })[c] ?? c).replace(/ß/g, "ss")}`,
+    );
 }
 
 const today = new Date();
@@ -42,8 +52,6 @@ async function fetchOnThisDay(): Promise<SelectedEvent[]> {
 }
 
 function buildTootParts(events: SelectedEvent[]): string[] {
-  const footer = `Tägliche Updates was an diesem Datum passiert ist. Informationsuelle: Wikipedia (https://de.wikipedia.org/wiki/${wikiDate})\n#HeuteVor #Wikipedia`;
-
   const lines = events
     .sort((a, b) => b.year - a.year)
     .map((event) => {
@@ -57,7 +65,9 @@ function buildTootParts(events: SelectedEvent[]): string[] {
         .replace(/\u00AD/g, "")     // soft hyphens
         .replace(/\u200B/g, "");    // zero-width spaces
 
-      return `Vor ${yearsAgo} Jahren: ${text}${link ? "\n" + link : ""}\n#HeuteVor #Wikipedia`;
+      const locationTags = findLocationHashtags(text).join(" ");
+      const hashtags = locationTags ? `${locationTags} #HeuteVor #Wikipedia` : "#HeuteVor #Wikipedia";
+      return `Vor ${yearsAgo} Jahren: ${text}${link ? "\n" + link : ""}\n${hashtags}`;
     });
 
   return lines;
