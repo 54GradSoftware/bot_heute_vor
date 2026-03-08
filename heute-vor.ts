@@ -51,15 +51,22 @@ async function fetchOnThisDay(): Promise<SelectedEvent[]> {
   return data.selected;
 }
 
+const MASTODON_LINK_LENGTH = 23;
+const MAX_TOOT_LENGTH = Number(process.env["MAX_TOOT_LENGTH"]) || 500;
+
+function mastodonLength(text: string): number {
+  // Mastodon counts every URL (http:// or https://) as 23 characters
+  return text.replace(/https?:\/\/\S+/g, "x".repeat(MASTODON_LINK_LENGTH)).length;
+}
+
 function buildTootParts(events: SelectedEvent[]): string[] {
   const lines = events
     .sort((a, b) => b.year - a.year)
     .map((event) => {
       const yearsAgo = currentYear - event.year;
-      const wikiPage = event.pages.find(
-        (p) => p.content_urls?.desktop?.page && !p.title.startsWith("Datei:")
-      );
-      const link = wikiPage?.content_urls.desktop.page ?? "";
+      const links = event.pages
+        .filter((p) => p.content_urls?.desktop?.page && !p.title.startsWith("Datei:"))
+        .map((p) => p.content_urls.desktop.page);
 
       const text = event.text
         .replace(/\u00AD/g, "")     // soft hyphens
@@ -67,7 +74,22 @@ function buildTootParts(events: SelectedEvent[]): string[] {
 
       const locationTags = findLocationHashtags(text).join(" ");
       const hashtags = locationTags ? `${locationTags} #HeuteVor #Wikipedia` : "#HeuteVor #Wikipedia";
-      return `Vor ${yearsAgo} Jahren: ${text}${link ? "\n" + link : ""}\n${hashtags}`;
+
+      const base = `Vor ${yearsAgo} Jahren: ${text}`;
+      let toot = `${base}\n${hashtags}`;
+
+      const includedLinks: string[] = [];
+      for (const link of links) {
+        includedLinks.push(link);
+        const candidate = `${base}\n${includedLinks.join("\n")}\n${hashtags}`;
+        if (mastodonLength(candidate) <= MAX_TOOT_LENGTH) {
+          toot = candidate;
+        } else {
+          break;
+        }
+      }
+
+      return toot;
     });
 
   return lines;
@@ -132,7 +154,6 @@ async function main() {
       
     console.log(part);
     console.log(`--- Zeichenanzahl: ${part.length} ---\n`);
-
     const posted = await postToMastodon(part, lastId);
     lastId = posted.id;
     console.log(`Toot gepostet: ${posted.url}\n`);
